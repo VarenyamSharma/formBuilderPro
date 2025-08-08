@@ -1,44 +1,75 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import express from 'express';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import morgan from 'morgan';
 import mongoose from 'mongoose';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import 'dotenv/config';
 
-import authRouter from './src/routes/auth.js';
-import formRouter from './src/routes/forms.js';
-import responseRouter from './src/routes/responses.js';
+import formRoutes from './routes/forms.js';
+import uploadRoutes from './routes/upload.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173', credentials: true }));
-app.use(express.json({ limit: '1mb' }));
-app.use(cookieParser());
-app.use(morgan('dev'));
+// Security middleware
+app.use(helmet());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? 'your-frontend-url' : 'http://localhost:5173',
+  credentials: true
+}));
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
 
-app.use('/api/auth', authRouter);
-app.use('/api/forms', formRouter);
-app.use('/api/responses', responseRouter);
+// Body parser middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-const mongoUri = process.env.MONGODB_URI;
-if (!mongoUri) {
-  console.error('Missing MONGODB_URI in environment');
-  process.exit(1);
-}
+// Static file serving for uploaded images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-mongoose
-  .connect(mongoUri)
-  .then(() => {
-    const port = Number(process.env.PORT) || 4000;
-    app.listen(port, () => console.log(`API listening on :${port}`));
-  })
-  .catch((err) => {
-    console.error('Mongo connection error', err);
-    process.exit(1);
+// MongoDB connection
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('MongoDB connected successfully'))
+.catch(err => console.error('MongoDB connection error:', err));
+
+// Routes
+app.use('/api/forms', formRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : {}
   });
+});
 
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
 
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+export default app;
