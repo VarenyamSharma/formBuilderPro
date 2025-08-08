@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { FormContextType, Form, Response } from '../types';
+import { apiDelete, apiGet, apiPost, apiPut } from './api';
 
 const FormContext = createContext<FormContextType | null>(null);
 
@@ -17,74 +18,46 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentForm, setCurrentForm] = useState<Form | null>(null);
 
   useEffect(() => {
-    const savedForms = localStorage.getItem('forms');
-    const savedResponses = localStorage.getItem('responses');
-    
-    if (savedForms) {
+    (async () => {
       try {
-        setForms(JSON.parse(savedForms));
-      } catch (error) {
-        console.error('Error loading forms:', error);
+        const data = await apiGet('/api/forms');
+        setForms(data);
+      } catch (e) {
+        setForms([]);
       }
-    }
-    
-    if (savedResponses) {
-      try {
-        setResponses(JSON.parse(savedResponses));
-      } catch (error) {
-        console.error('Error loading responses:', error);
-      }
-    }
+    })();
   }, []);
 
-  const saveToStorage = (newForms: Form[], newResponses?: Response[]) => {
-    localStorage.setItem('forms', JSON.stringify(newForms));
-    if (newResponses) {
-      localStorage.setItem('responses', JSON.stringify(newResponses));
-    }
-  };
+  const saveToStorage = (_newForms: Form[], _newResponses?: Response[]) => {};
 
-  const createForm = (formData: Omit<Form, 'id' | 'createdAt' | 'updatedAt'>): string => {
-    const newForm: Form = {
-      ...formData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    const newForms = [...forms, newForm];
-    setForms(newForms);
-    saveToStorage(newForms);
-    
-    return newForm.id;
+  const createForm = async (formData: Omit<Form, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+    const created = await apiPost('/api/forms', formData);
+    setForms((prev) => [created, ...prev]);
+    return created.id;
   };
 
   const updateForm = (formId: string, updates: Partial<Form>) => {
-    const newForms = forms.map(form => 
-      form.id === formId 
-        ? { ...form, ...updates, updatedAt: new Date().toISOString() }
-        : form
-    );
-    
-    setForms(newForms);
-    saveToStorage(newForms);
-    
+    setForms((prev) => prev.map((f) => (f.id === formId ? { ...f, ...updates, updatedAt: new Date().toISOString() } : f)));
     if (currentForm && currentForm.id === formId) {
       setCurrentForm({ ...currentForm, ...updates, updatedAt: new Date().toISOString() });
     }
+    (async () => {
+      try {
+        const updated = await apiPut(`/api/forms/${formId}`, updates);
+        setForms((prev) => prev.map((f) => (f.id === formId ? updated : f)));
+      } catch {}
+    })();
   };
 
   const deleteForm = (formId: string) => {
-    const newForms = forms.filter(form => form.id !== formId);
-    const newResponses = responses.filter(response => response.formId !== formId);
-    
-    setForms(newForms);
-    setResponses(newResponses);
-    saveToStorage(newForms, newResponses);
-    
+    setForms((prev) => prev.filter((f) => f.id !== formId));
+    setResponses((prev) => prev.filter((r) => r.formId !== formId));
     if (currentForm && currentForm.id === formId) {
       setCurrentForm(null);
     }
+    (async () => {
+      try { await apiDelete(`/api/forms/${formId}`); } catch {}
+    })();
   };
 
   const getForm = (formId: string): Form | null => {
@@ -92,20 +65,21 @@ export const FormProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const submitResponse = (formId: string, answers: Record<string, any>, submitterInfo?: any) => {
-    const newResponse: Response = {
-      id: Date.now().toString(),
-      formId,
-      answers,
-      submittedAt: new Date().toISOString(),
-      submitterInfo
-    };
-    
-    const newResponses = [...responses, newResponse];
-    setResponses(newResponses);
-    localStorage.setItem('responses', JSON.stringify(newResponses));
+    const newResponse: Response = { id: `temp-${Date.now()}`, formId, answers, submittedAt: new Date().toISOString(), submitterInfo } as any;
+    setResponses((prev) => [...prev, newResponse]);
   };
 
   const getFormResponses = (formId: string): Response[] => {
+    (async () => {
+      try {
+        const list = await apiGet(`/api/responses/form/${formId}`);
+        const normalized: Response[] = list.map((r: any) => ({ id: r.id, formId, answers: r.answers, submittedAt: r.submittedAt, submitterInfo: r.submitterInfo }));
+        setResponses((prev) => {
+          const others = prev.filter((p) => p.formId !== formId);
+          return [...others, ...normalized];
+        });
+      } catch {}
+    })();
     return responses.filter(response => response.formId === formId);
   };
 

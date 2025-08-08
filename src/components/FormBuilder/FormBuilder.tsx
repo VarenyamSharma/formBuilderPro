@@ -135,7 +135,7 @@ const FormBuilder: React.FC = () => {
       if (id) {
         updateForm(id, formData);
       } else {
-        const newFormId = createForm(formData);
+        const newFormId = await createForm(formData);
         navigate(`/forms/${newFormId}/edit`);
       }
 

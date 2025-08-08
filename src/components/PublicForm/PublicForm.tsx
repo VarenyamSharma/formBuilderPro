@@ -6,11 +6,12 @@ import CategorizePreview from '../FormBuilder/previews/CategorizePreview';
 import ClozePreview from '../FormBuilder/previews/ClozePreview';
 import ComprehensionPreview from '../FormBuilder/previews/ComprehensionPreview';
 import { CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { apiGet, apiPost } from '../../context/api';
 
 const PublicForm: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getForm, submitResponse } = useForm();
+  const { submitResponse } = useForm();
   const [form, setForm] = useState<Form | null>(null);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitterInfo, setSubmitterInfo] = useState({ name: '', email: '' });
@@ -20,18 +21,27 @@ const PublicForm: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      const foundForm = getForm(id);
-      if (foundForm) {
-        if (foundForm.isPublished) {
-          setForm(foundForm);
-        } else {
-          setError('This form is not published yet.');
+      (async () => {
+        try {
+          const data = await apiGet(`/api/forms/public/${id}`);
+          setForm({
+            id: data.id,
+            title: data.title,
+            description: data.description,
+            headerImage: data.headerImage,
+            questions: data.questions,
+            createdBy: '',
+            createdAt: '',
+            updatedAt: '',
+            isPublished: true,
+            publicId: data.publicId,
+          });
+        } catch (e) {
+          setError('Form not found or not available.');
         }
-      } else {
-        setError('Form not found.');
-      }
+      })();
     }
-  }, [id, getForm]);
+  }, [id]);
 
   const updateAnswer = (questionId: string, answer: any) => {
     setAnswers(prev => ({
@@ -56,6 +66,7 @@ const PublicForm: React.FC = () => {
     setError('');
 
     try {
+      await apiPost(`/api/responses/public/${form.publicId}`, { answers, submitterInfo });
       submitResponse(form.id, answers, submitterInfo);
       setIsSubmitted(true);
     } catch (err) {
@@ -157,7 +168,7 @@ const PublicForm: React.FC = () => {
                   alt="Form header"
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    e.currentTarget.style.display = 'none';
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
                   }}
                 />
               </div>
@@ -222,7 +233,7 @@ const PublicForm: React.FC = () => {
                           alt="Question"
                           className="max-w-md h-48 object-cover rounded-lg border border-gray-200"
                           onError={(e) => {
-                            e.currentTarget.style.display = 'none';
+                            (e.currentTarget as HTMLImageElement).style.display = 'none';
                           }}
                         />
                       </div>

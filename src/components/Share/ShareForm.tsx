@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm } from '../../context/FormContext';
+import { API_BASE_URL } from '../../context/api';
 import { Copy, Mail, ExternalLink, Share, Check, AlertCircle } from 'lucide-react';
 
 const ShareForm: React.FC = () => {
@@ -14,7 +15,7 @@ const ShareForm: React.FC = () => {
   const [emailSent, setEmailSent] = useState(false);
 
   const form = id ? getForm(id) : null;
-  const formUrl = form ? `${window.location.origin}/form/${form.id}` : '';
+  const formUrl = form?.publicId ? `${window.location.origin}/form/${form.publicId}` : '';
 
   React.useEffect(() => {
     if (form) {

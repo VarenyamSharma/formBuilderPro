@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthContextType, User } from '../types';
+import { apiPost } from './api';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -17,12 +18,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('userData');
-    
     if (token && userData) {
       try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-      } catch (error) {
+        setUser(JSON.parse(userData));
+      } catch {
         localStorage.removeItem('authToken');
         localStorage.removeItem('userData');
       }
@@ -30,36 +29,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulate API call - in real app, this would call your backend
-    if (email === 'admin@example.com' && password === 'admin123') {
-      const userData = {
-        id: '1',
-        email,
-        name: 'Admin User',
-        role: 'admin' as const
-      };
-      
-      localStorage.setItem('authToken', 'mock-jwt-token');
-      localStorage.setItem('userData', JSON.stringify(userData));
-      setUser(userData);
+    try {
+      const res = await apiPost('/api/auth/login', { email, password });
+      localStorage.setItem('authToken', res.token);
+      localStorage.setItem('userData', JSON.stringify(res.user));
+      setUser(res.user);
       return true;
+    } catch (e) {
+      return false;
     }
-    return false;
   };
 
   const register = async (email: string, password: string, name: string): Promise<boolean> => {
-    // Simulate registration - in real app, this would call your backend
-    const userData = {
-      id: Date.now().toString(),
-      email,
-      name,
-      role: 'admin' as const
-    };
-    
-    localStorage.setItem('authToken', 'mock-jwt-token');
-    localStorage.setItem('userData', JSON.stringify(userData));
-    setUser(userData);
-    return true;
+    try {
+      const res = await apiPost('/api/auth/register', { email, password, name });
+      localStorage.setItem('authToken', res.token);
+      localStorage.setItem('userData', JSON.stringify(res.user));
+      setUser(res.user);
+      return true;
+    } catch (e) {
+      return false;
+    }
   };
 
   const logout = () => {

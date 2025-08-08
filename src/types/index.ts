@@ -55,6 +55,7 @@ export interface Form {
   createdAt: string;
   updatedAt: string;
   isPublished: boolean;
+  publicId?: string;
 }
 
 export interface Response {
@@ -72,7 +73,7 @@ export interface FormContextType {
   forms: Form[];
   responses: Response[];
   currentForm: Form | null;
-  createForm: (form: Omit<Form, 'id' | 'createdAt' | 'updatedAt'>) => string;
+  createForm: (form: Omit<Form, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
   updateForm: (formId: string, updates: Partial<Form>) => void;
   deleteForm: (formId: string) => void;
   getForm: (formId: string) => Form | null;
