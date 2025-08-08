@@ -21,6 +21,7 @@ const FormViewer: React.FC = () => {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [submissionScore, setSubmissionScore] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -109,10 +110,11 @@ const FormViewer: React.FC = () => {
 
     setSubmitting(true);
     try {
-      await formApi.submitForm(id, {
+      const response = await formApi.submitForm(id, {
         submitterEmail: form.settings.collectEmail ? email : undefined,
         answers,
       });
+      setSubmissionScore(response.data.score);
       setSubmitted(true);
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -159,6 +161,12 @@ const FormViewer: React.FC = () => {
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Thank You!</h2>
           <p className="text-gray-600 mb-6">Your response has been submitted successfully.</p>
+          {submissionScore !== null && (
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-900 mb-1">{submissionScore}%</div>
+              <div className="text-sm text-blue-600">Your Score</div>
+            </div>
+          )}
           <button
             onClick={() => navigate('/')}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

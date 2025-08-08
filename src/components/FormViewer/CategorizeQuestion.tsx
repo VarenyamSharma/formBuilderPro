@@ -1,5 +1,5 @@
 import React from 'react';
-import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, DragEndEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -17,6 +17,73 @@ interface SortableItemProps {
   text: string;
   isPlaced: boolean;
 }
+
+interface DroppableCategoryProps {
+  categoryId: string;
+  categoryName: string;
+  itemsInCategory: any[];
+  onRemoveItem: (itemId: string) => void;
+}
+
+const DroppableCategory: React.FC<DroppableCategoryProps> = ({
+  categoryId,
+  categoryName,
+  itemsInCategory,
+  onRemoveItem,
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: categoryId,
+  });
+
+  return (
+    <div
+      key={categoryId}
+      className="border-2 border-gray-300 rounded-lg p-4 min-h-[120px] bg-gray-50"
+    >
+      <h5 className="font-medium text-gray-900 mb-3 text-center">
+        {categoryName}
+      </h5>
+      
+      {/* Drop zone */}
+      <div
+        ref={setNodeRef}
+        className={`min-h-[80px] border-2 border-dashed rounded-lg p-2 bg-white transition-colors ${
+          isOver 
+            ? 'border-blue-400 bg-blue-50' 
+            : 'border-gray-300 hover:bg-blue-50'
+        }`}
+      >
+        <div
+          className="min-h-[76px] rounded-lg flex items-center justify-center"
+          style={{ minHeight: '76px' }}
+        >
+          {itemsInCategory.length === 0 ? (
+            <div className="text-gray-400 text-sm">
+              Drop items here
+            </div>
+          ) : (
+            <div className="space-y-2 w-full">
+              {itemsInCategory.map((item) => (
+                <div
+                  key={item?.id}
+                  className="p-2 bg-blue-100 border border-blue-300 rounded-lg flex items-center justify-between"
+                >
+                  <span className="text-blue-900 text-sm">{item?.text}</span>
+                  <button
+                    onClick={() => onRemoveItem(item?.id || '')}
+                    className="text-blue-600 hover:text-blue-800 text-xs"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SortableItem: React.FC<SortableItemProps> = ({ id, text, isPlaced }) => {
   const {
@@ -150,54 +217,13 @@ const CategorizeQuestion: React.FC<CategorizeQuestionProps> = ({
               const itemsInCategory = getItemsInCategory(category.id);
               
               return (
-                <div
+                <DroppableCategory
                   key={category.id}
-                  className="border-2 border-gray-300 rounded-lg p-4 min-h-[120px] bg-gray-50"
-                >
-                  <h5 className="font-medium text-gray-900 mb-3 text-center">
-                    {category.name}
-                  </h5>
-                  
-                  {/* Drop zone */}
-                  <div
-                    className="min-h-[80px] border-2 border-dashed border-gray-300 rounded-lg p-2 bg-white"
-                    data-category-id={category.id}
-                  >
-                    <SortableContext
-                      items={[category.id]}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div
-                        className="min-h-[76px] rounded-lg transition-colors hover:bg-blue-50"
-                        style={{ minHeight: '76px' }}
-                        data-droppable-id={category.id}
-                      >
-                        {itemsInCategory.length === 0 ? (
-                          <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                            Drop items here
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {itemsInCategory.map((item) => (
-                              <div
-                                key={item?.id}
-                                className="p-2 bg-blue-100 border border-blue-300 rounded-lg flex items-center justify-between"
-                              >
-                                <span className="text-blue-900 text-sm">{item?.text}</span>
-                                <button
-                                  onClick={() => removeFromCategory(item?.id || '')}
-                                  className="text-blue-600 hover:text-blue-800 text-xs"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </SortableContext>
-                  </div>
-                </div>
+                  categoryId={category.id}
+                  categoryName={category.name}
+                  itemsInCategory={itemsInCategory}
+                  onRemoveItem={removeFromCategory}
+                />
               );
             })}
           </div>

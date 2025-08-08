@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import { Save, Eye, Settings, Upload, ArrowLeft, Plus } from 'lucide-react';
+import { Save, Eye, Settings, Upload, ArrowLeft, Plus, BarChart3 } from 'lucide-react';
 import { Form, Question } from '../../types/form';
 import { formApi, uploadApi } from '../../services/api';
 import { generateId } from '../../utils/helpers';
@@ -10,6 +10,7 @@ import FormHeader from './FormHeader';
 import QuestionEditor from './QuestionEditor';
 import QuestionPalette from './QuestionPalette';
 import FormSettings from './FormSettings';
+import FormSubmissions from './FormSubmissions';
 import SortableQuestion from './SortableQuestion';
 
 const FormEditor: React.FC = () => {
@@ -30,6 +31,7 @@ const FormEditor: React.FC = () => {
   
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSubmissions, setShowSubmissions] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -187,13 +189,22 @@ const FormEditor: React.FC = () => {
               </button>
               
               {form._id && (
-                <button
-                  onClick={() => navigate(`/form/${form._id}`)}
-                  className="inline-flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  Preview
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowSubmissions(true)}
+                    className="inline-flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Responses
+                  </button>
+                  <button
+                    onClick={() => navigate(`/form/${form._id}`)}
+                    className="inline-flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview
+                  </button>
+                </>
               )}
               
               <button
@@ -275,6 +286,14 @@ const FormEditor: React.FC = () => {
           form={form}
           onUpdate={setForm}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* Submissions Modal */}
+      {showSubmissions && (
+        <FormSubmissions
+          form={form}
+          onClose={() => setShowSubmissions(false)}
         />
       )}
     </div>

@@ -56,6 +56,10 @@ export const formApi = {
   // Get form submissions
   getFormSubmissions: (id: string) => api.get<Submission[]>(`/forms/${id}/submissions`),
   
+  // Get single submission
+  getSubmission: (formId: string, submissionId: string) => 
+    api.get<Submission>(`/forms/${formId}/submissions/${submissionId}`),
+  
   // Publish/unpublish form
   publishForm: (id: string, isPublished: boolean) => 
     api.patch<Form>(`/forms/${id}/publish`, { isPublished }),
