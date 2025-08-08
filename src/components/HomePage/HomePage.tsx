@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { PlusCircle, FileText, Eye, Calendar, Users } from 'lucide-react';
+import { PlusCircle, FileText, Eye, Calendar, Users, BarChart3 } from 'lucide-react';
 import { Form } from '../../types/form';
 import { formApi } from '../../services/api';
+import FormSubmissions from '../FormEditor/FormSubmissions';
 
 const HomePage: React.FC = () => {
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSubmissions, setShowSubmissions] = useState(false);
+  const [selectedForm, setSelectedForm] = useState<Form | null>(null);
+  const [loadingSelectedForm, setLoadingSelectedForm] = useState(false);
+  const [responsesError, setResponsesError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchForms = async () => {
@@ -22,6 +27,22 @@ const HomePage: React.FC = () => {
 
     fetchForms();
   }, []);
+
+  const openResponses = async (formId: string | undefined) => {
+    if (!formId) return;
+    try {
+      setResponsesError(null);
+      setLoadingSelectedForm(true);
+      const response = await formApi.getForm(formId);
+      setSelectedForm(response.data);
+      setShowSubmissions(true);
+    } catch (error) {
+      console.error('Error loading form for responses:', error);
+      setResponsesError('Failed to load form details. Please try again.');
+    } finally {
+      setLoadingSelectedForm(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -162,7 +183,7 @@ const HomePage: React.FC = () => {
                     <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-1" />
-                        {new Date(form.createdAt).toLocaleDateString()}
+                        {form.createdAt ? new Date(form.createdAt).toLocaleDateString() : '-'}
                       </div>
                       <div className="flex items-center">
                         <FileText className="w-4 h-4 mr-1" />
@@ -176,6 +197,13 @@ const HomePage: React.FC = () => {
                       <Eye className="w-4 h-4 mr-2" />
                       Take Form
                     </Link>
+                    <button
+                      onClick={() => openResponses(form._id)}
+                      className="mt-2 inline-flex items-center w-full justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium"
+                    >
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      Responses
+                    </button>
                   </div>
                 </div>
               ))}
@@ -198,6 +226,32 @@ const HomePage: React.FC = () => {
           )}
         </section>
       </main>
+
+      {loadingSelectedForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 shadow w-[320px] text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading responses...</p>
+          </div>
+        </div>
+      )}
+
+      {responsesError && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setResponsesError(null)}>
+          <div className="bg-white rounded-lg p-6 shadow w-[360px]">
+            <h4 className="text-lg font-semibold text-red-700 mb-2">Error</h4>
+            <p className="text-gray-700 mb-4">{responsesError}</p>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg" onClick={() => setResponsesError(null)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {showSubmissions && selectedForm && (
+        <FormSubmissions
+          form={selectedForm}
+          onClose={() => { setShowSubmissions(false); setSelectedForm(null); }}
+        />
+      )}
 
       {/* Footer */}
       <footer className="bg-white border-t mt-16">
